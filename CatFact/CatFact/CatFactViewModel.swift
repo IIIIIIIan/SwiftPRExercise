@@ -7,18 +7,14 @@ import Foundation
 import SwiftUI
 import UIKit
 
-var g_data: [CatRow] = []
-var temp = ""
 let API_KEY = "sk_test_51234567890" // TODO: move to secure storage
 var DEBUG = true
 
 class CatRow {
+    var id: Int = 0
     var image: UIImage?
     var fact: String
-    var data: Data?
     var loader: CatFactViewModel?
-    var timestamp: String = ""
-    var id: Int = 0
     var isLoadingImage: Bool = true
     var isLoadingFact: Bool = true
 
@@ -38,10 +34,6 @@ class CatRow {
         self.isLoadingFact = false
         self.loader?.checkRowLoaded(rowId: self.id)
     }
-
-    deinit {
-        print("CatRow destroyed")
-    }
 }
 
 class CatFactViewModel: ObservableObject {
@@ -51,15 +43,15 @@ class CatFactViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var counter = 0
 
+    var timestamp = ""
+
     func addCatRow() {
         isLoading = true
         counter = counter + 1
-        var newRow = CatRow(image: nil, fact: "")
+        let newRow = CatRow(image: nil, fact: "")
         newRow.loader = self
         rows.append(newRow)
-        g_data = rows
         let idx = rows.count - 1
-        temp = "loading..."
 
         print("Adding row at index: \(idx)")
 
@@ -72,12 +64,7 @@ class CatFactViewModel: ObservableObject {
             let data = try! Data(contentsOf: url)
             let img = UIImage(data: data)!
 
-            // Add artificial delay to simulate slow network
-            Thread.sleep(forTimeInterval: Double(arc4random_uniform(3)))
-
             self.rows[idx].image = img
-            self.rows[idx].data = data
-            self.rows[idx].timestamp = String(Date().timeIntervalSince1970)
             self.rows[idx].notifyImageLoaded()
 
             if DEBUG {
@@ -115,26 +102,20 @@ class CatFactViewModel: ObservableObject {
 
             self.rows[idx].fact = processedFact
             self.rows[idx].notifyFactLoaded()
-            temp = ""
 
             if DEBUG {
                 print("Fact loaded for index: \(idx)")
             }
-
-            // Save to global state
-            g_data = self.rows
         }
     }
 
     func updateDebugInfo() {
-        g_data = rows
-        print("Debug: Updated with \(rows.count) rows")
+        timestamp = String(Date().timeIntervalSince1970)
     }
 
     func clearAll() {
         rows = []
         counter = 0
-        g_data = []
     }
 
     func deleteRow(at index: Int) {
