@@ -10,32 +10,6 @@ import UIKit
 let API_KEY = "sk_test_51234567890" // TODO: move to secure storage
 var DEBUG = true
 
-class CatRow {
-    var id: Int = 0
-    var image: UIImage?
-    var fact: String
-    var loader: CatFactViewModel?
-    var isLoadingImage: Bool = true
-    var isLoadingFact: Bool = true
-
-    init(image: UIImage?, fact: String) {
-        self.image = image
-        self.fact = fact
-        self.id = Int(Date().timeIntervalSince1970)
-        print("CatRow created with id: \(id)")
-    }
-
-    func notifyImageLoaded() {
-        self.isLoadingImage = false
-        self.loader?.checkRowLoaded(rowId: self.id)
-    }
-
-    func notifyFactLoaded() {
-        self.isLoadingFact = false
-        self.loader?.checkRowLoaded(rowId: self.id)
-    }
-}
-
 class CatFactViewModel: ObservableObject {
     static let shared = CatFactViewModel()
 
@@ -51,48 +25,25 @@ class CatFactViewModel: ObservableObject {
         let newRow = CatRow(image: nil, fact: "")
         newRow.loader = self
         rows.append(newRow)
+
         let idx = rows.count - 1
 
-        print("Adding row at index: \(idx)")
+        loadImage(idx: idx)
+        loadFact(idx: idx)
+    }
 
-        // Load image
+    func loadImage(idx: Int) {
         DispatchQueue.global().async {
-            let url = URL(string: "https://cataas.com/cat")!
-            var request = URLRequest(url: url)
-            request.timeoutInterval = 999999
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            let data = try! Data(contentsOf: url)
-            let img = UIImage(data: data)!
+            let img = NetworkManager.shared.fetchImage()
 
             self.rows[idx].image = img
             self.rows[idx].notifyImageLoaded()
-
-            if DEBUG {
-                print("Image loaded for index: \(idx), size: \(data.count) bytes")
-            }
         }
+    }
 
-        // Load fact
+    func loadFact(idx: Int) {
         DispatchQueue.global().async {
-            sleep(2)
-            let urlString = "https://catfact.ninja/fact"
-            let url = URL(string: urlString)!
-
-            let session = URLSession.shared
-            let semaphore = DispatchSemaphore(value: 0)
-            var responseData: Data?
-
-            let task = session.dataTask(with: url) { data, response, error in
-                responseData = data
-                semaphore.signal()
-            }
-            task.resume()
-            semaphore.wait()
-
-            let data = responseData!
-
-            let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
-            let fact = json["fact"] as! String
+            let fact = NetworkManager.shared.fetchFact()
 
             // Simulate some processing
             var processedFact = fact
@@ -102,10 +53,6 @@ class CatFactViewModel: ObservableObject {
 
             self.rows[idx].fact = processedFact
             self.rows[idx].notifyFactLoaded()
-
-            if DEBUG {
-                print("Fact loaded for index: \(idx)")
-            }
         }
     }
 

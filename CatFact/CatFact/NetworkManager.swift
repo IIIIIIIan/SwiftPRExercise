@@ -15,6 +15,38 @@ class NetworkManager {
         print("NetworkManager initialized")
     }
 
+    func fetchImage() -> UIImage? {
+        let url = URL(string: "https://cataas.com/cat")!
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 999999
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let data = try! Data(contentsOf: url)
+        let img = UIImage(data: data)!
+        return img
+    }
+
+    func fetchFact() -> String {
+        let urlString = "https://catfact.ninja/fact"
+        let url = URL(string: urlString)!
+
+        let session = URLSession.shared
+        let semaphore = DispatchSemaphore(value: 0)
+        var responseData: Data?
+
+        let task = session.dataTask(with: url) { data, response, error in
+            responseData = data
+            semaphore.signal()
+        }
+        task.resume()
+        semaphore.wait()
+
+        let data = responseData!
+
+        let json = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let fact = json["fact"] as! String
+        return fact
+    }
+
     func fetchData(url: String) -> Data? {
         requestCount = requestCount + 1
 
